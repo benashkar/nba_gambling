@@ -1,0 +1,15 @@
+# NBA Gambling Scraper - Cron Configuration
+#
+# To install, run: crontab -e
+# Then paste the desired lines below
+#
+# Note: Adjust paths if your installation directory is different
+
+# Daily scrape of current season at 6 AM (after games finish)
+0 6 * * * cd /home/ubuntu/nba_gambling && ./deploy/run_scraper.sh >> logs/cron.log 2>&1
+
+# Weekly full historical scrape on Sunday at 4 AM (to catch any corrections)
+# 0 4 * * 0 cd /home/ubuntu/nba_gambling && ./deploy/run_scraper.sh --full >> logs/cron.log 2>&1
+
+# Log rotation - keep last 7 days of logs
+0 0 * * * find /home/ubuntu/nba_gambling/logs -name "*.log" -mtime +7 -delete

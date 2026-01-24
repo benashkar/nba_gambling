@@ -46,3 +46,8 @@ checkpoints/
 
 # Recon output
 recon_output/
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.production
