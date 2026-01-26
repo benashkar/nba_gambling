@@ -458,9 +458,8 @@ class OddsPortalScraper:
         """
         Determine total number of result pages.
 
-        Note: OddsPortal pagination only shows a subset of page links.
-        For NBA seasons with ~1,300 games at ~30 games/page, expect ~44 pages.
-        We return a high estimate and let scrape_season stop when no games found.
+        Note: OddsPortal typically has ~28 pages per season (~840 games).
+        Pages beyond this return duplicate data.
         """
         try:
             html = self._get_page_html()
@@ -477,16 +476,11 @@ class OddsPortalScraper:
                 except ValueError:
                     continue
 
-            # OddsPortal only shows limited pagination links, but more pages exist
-            # NBA seasons have ~1,300 games, ~30 per page = ~44 pages
-            # Return higher estimate to ensure we get all pages
-            estimated_total = max(max_page, 50)  # At least 50 pages or what we found
-
-            logger.info(f"Found {max_page} visible pages, will scrape up to {estimated_total}")
-            return estimated_total
+            logger.info(f"Found {max_page} total pages")
+            return max_page
         except Exception as e:
             logger.error(f"Error getting total pages: {e}")
-            return 50  # Default to 50 pages for NBA seasons
+            return 1
 
     def _save_checkpoint(self, season: str, page: int, games: List[Dict]):
         """Save current progress to checkpoint file."""
@@ -565,9 +559,6 @@ class OddsPortalScraper:
         logger.info(f"Scraping {season}: pages {start_page} to {total_pages}")
 
         # Scrape each page
-        consecutive_empty_pages = 0
-        max_empty_pages = 2  # Stop after 2 consecutive empty pages
-
         for page in range(start_page, total_pages + 1):
             self.current_page = page
 
@@ -576,27 +567,11 @@ class OddsPortalScraper:
                 page_url = f"{url}#/page/{page}/"
                 if not self._navigate_to_page(page_url):
                     logger.error(f"Failed to load page {page}")
-                    consecutive_empty_pages += 1
-                    if consecutive_empty_pages >= max_empty_pages:
-                        logger.info(f"Stopping: {max_empty_pages} consecutive failed pages")
-                        break
                     continue
 
             # Parse games
             html = self._get_page_html()
             page_games = self._parse_games_from_html(html, season)
-
-            # Check if we've reached the end (no more games)
-            if not page_games:
-                consecutive_empty_pages += 1
-                logger.info(f"Page {page}: no games found ({consecutive_empty_pages} empty)")
-                if consecutive_empty_pages >= max_empty_pages:
-                    logger.info(f"Stopping: reached end of results after {page} pages")
-                    break
-                self._random_delay(self.MIN_PAGE_DELAY, self.MAX_PAGE_DELAY)
-                continue
-            else:
-                consecutive_empty_pages = 0  # Reset counter when games found
 
             # Fetch spread/O/U from detail pages if enabled
             if self.fetch_details:
