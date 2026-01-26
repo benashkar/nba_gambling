@@ -388,18 +388,22 @@ def main():
 
     try:
         if seasons:
-            # Scrape specific seasons
-            for season in seasons:
-                logger.info(f"Scraping season {season}")
-                games = scraper.scrape_season(
-                    season,
-                    resume=resume,
-                    max_pages=args.max_pages,
-                    fetch_details=args.fetch_details
-                )
-                all_games.extend(games)
+            # Scrape specific seasons - need to set up driver first
+            scraper._setup_driver()
+            try:
+                for season in seasons:
+                    logger.info(f"Scraping season {season}")
+                    games = scraper.scrape_season(
+                        season,
+                        resume=resume,
+                        max_pages=args.max_pages,
+                        fetch_details=args.fetch_details
+                    )
+                    all_games.extend(games)
+            finally:
+                scraper._close_driver()
         else:
-            # Scrape all seasons
+            # Scrape all seasons (driver setup handled internally)
             results = scraper.scrape_all_seasons(resume=resume, fetch_details=args.fetch_details)
             for season, games in results.items():
                 all_games.extend(games)
