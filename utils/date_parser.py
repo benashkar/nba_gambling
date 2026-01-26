@@ -73,7 +73,13 @@ class DateParser:
 
     @classmethod
     def _parse_day_month(cls, date_str: str, reference_year: Optional[int]) -> Optional[str]:
-        """Parse formats like '15 Jan' when year is implied."""
+        """
+        Parse formats like '15 Jan' when year is implied.
+
+        For NBA seasons (Oct-Apr), reference_year is the season start year:
+        - Oct-Dec games: use reference_year (e.g., 2021 for 2021-22 season)
+        - Jan-Sep games: use reference_year + 1 (e.g., 2022 for 2021-22 season)
+        """
         if not reference_year:
             reference_year = datetime.now().year
 
@@ -83,7 +89,12 @@ class DateParser:
             day, month = match.groups()
             month_num = cls.MONTH_MAP.get(month)
             if month_num:
-                return f"{reference_year}-{month_num:02d}-{int(day):02d}"
+                # NBA season logic: Oct-Dec = first year, Jan-Sep = second year
+                if month_num >= 10:  # Oct, Nov, Dec
+                    year = reference_year
+                else:  # Jan through Sep
+                    year = reference_year + 1
+                return f"{year}-{month_num:02d}-{int(day):02d}"
 
         return None
 
