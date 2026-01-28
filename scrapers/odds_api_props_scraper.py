@@ -80,11 +80,18 @@ class OddsAPIPropsScraper:
         Initialize the scraper.
 
         Args:
-            api_key: The Odds API key (or load from config)
+            api_key: The Odds API key (or load from config/env)
             config_path: Path to config file with API key
         """
+        import os
+
         self.api_key = api_key
 
+        # Check environment variable
+        if not self.api_key:
+            self.api_key = os.environ.get('ODDS_API_KEY')
+
+        # Check config file
         if not self.api_key and config_path:
             self.api_key = self._load_api_key(config_path)
         elif not self.api_key:
@@ -94,7 +101,7 @@ class OddsAPIPropsScraper:
                 self.api_key = self._load_api_key(str(default_config))
 
         if not self.api_key:
-            raise ValueError("API key required. Set via api_key param or config file.")
+            raise ValueError("API key required. Set via ODDS_API_KEY env var, api_key param, or config file.")
 
         self.base_url = "https://api.the-odds-api.com/v4"
         self.session = requests.Session()

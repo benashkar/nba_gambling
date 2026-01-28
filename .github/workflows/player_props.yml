@@ -1,0 +1,103 @@
+name: Scrape NBA Player Props
+
+on:
+  schedule:
+    # 8am CST = 14:00 UTC
+    - cron: '0 14 * * *'
+    # 4pm CST = 22:00 UTC
+    - cron: '0 22 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  scrape-props:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pandas
+
+      - name: Create output directory
+        run: mkdir -p data/output
+
+      - name: Run player props scraper
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          python -c "
+          import os
+          import sys
+          import json
+          from datetime import datetime
+          from pathlib import Path
+
+          # Add project to path
+          sys.path.insert(0, '.')
+
+          from scrapers.odds_api_props_scraper import OddsAPIPropsScraper
+
+          print('=' * 60)
+          print('NBA PLAYER PROPS SCRAPER - GitHub Actions')
+          print(f'Time: {datetime.now().isoformat()}')
+          print('=' * 60)
+
+          # Initialize scraper (uses ODDS_API_KEY env var)
+          scraper = OddsAPIPropsScraper()
+
+          # Scrape all props
+          results = scraper.scrape_all_props(
+              markets=['points', 'rebounds', 'assists', 'threes'],
+              bookmakers=['fanduel', 'draftkings', 'betmgm']
+          )
+
+          # Summary
+          total = sum(len(props) for props in results.values())
+          print(f'\nResults:')
+          for book, props in sorted(results.items()):
+              print(f'  {book.upper()}: {len(props)} props')
+          print(f'  TOTAL: {total} props')
+          print(f'  API requests remaining: {scraper.requests_remaining}')
+
+          if total > 0:
+              # Save with timestamp
+              timestamp = datetime.now().strftime('%Y%m%d_%H%M')
+              filename = f'player_props_{timestamp}.csv'
+              output_path = scraper.save_results(results, filename=filename)
+              print(f'Saved to: {output_path}')
+
+              # Also save latest
+              scraper.save_results(results, filename='player_props_latest.csv')
+
+              # Save comparison
+              comparison = scraper.find_best_odds(results)
+              compare_path = Path('data/output') / f'props_comparison_{timestamp}.csv'
+              comparison.to_csv(compare_path, index=False)
+              print(f'Comparison saved to: {compare_path}')
+          else:
+              print('No props found (no games today?)')
+          "
+
+      - name: Commit and push results
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/output/*.csv || true
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Auto-update player props $(date +'%Y-%m-%d %H:%M')"
+            git push
+          fi
