@@ -399,12 +399,19 @@ class OddsAPIPropsScraper:
         under_cols = [c for c in comparison.columns if 'under_odds' in c]
 
         if over_cols:
-            comparison['best_over'] = comparison[over_cols].max(axis=1)
-            comparison['best_over_book'] = comparison[over_cols].idxmax(axis=1).str.replace('_over_odds', '')
+            comparison['best_over'] = comparison[over_cols].max(axis=1, skipna=True)
+            # Handle rows where all values are NA
+            try:
+                comparison['best_over_book'] = comparison[over_cols].idxmax(axis=1, skipna=True).str.replace('_over_odds', '')
+            except ValueError:
+                comparison['best_over_book'] = None
 
         if under_cols:
-            comparison['best_under'] = comparison[under_cols].max(axis=1)
-            comparison['best_under_book'] = comparison[under_cols].idxmax(axis=1).str.replace('_under_odds', '')
+            comparison['best_under'] = comparison[under_cols].max(axis=1, skipna=True)
+            try:
+                comparison['best_under_book'] = comparison[under_cols].idxmax(axis=1, skipna=True).str.replace('_under_odds', '')
+            except ValueError:
+                comparison['best_under_book'] = None
 
         return comparison
 
