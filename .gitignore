@@ -51,3 +51,6 @@ recon_output/
 .env
 .env.local
 .env.production
+
+# API keys config (use api_keys.example.json as template)
+config/api_keys.json

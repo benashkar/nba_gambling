@@ -1,0 +1,7 @@
+{
+    "the_odds_api": {
+        "api_key": "YOUR_API_KEY_HERE",
+        "base_url": "https://api.the-odds-api.com/v4",
+        "_comment": "Get your free API key at https://the-odds-api.com (500 requests/month free)"
+    }
+}
